@@ -1,0 +1,337 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<ctype.h>
+#include<math.h>
+
+char *reg[] = {"AREG","BREG","CREG","DREG"};
+char *cc[] = {"LT","LE","EQ","GT","GE","ANY"};
+char *opcode[] = {"STOP","ADD","SUB","MULTI","DIV","MOVER","MOVEM","COMP","BC","READ","PRINT"};
+char *dir[] = {"LTORG","ORIGIN","EQU"};
+char *dl[] = {"DC","DS"};
+
+
+int isdl(char tok[])
+{
+int i=0;
+while(dl[i]!=NULL)
+{
+if(strcmp(dl[i],tok)==0)
+{
+return 1;
+}
+i++;
+}
+return 0;
+}
+
+int isopcode(char tok[])
+{
+int i=0;
+while(opcode[i]!=NULL)
+{
+if(strcmp(tok,opcode[i])==0)
+{
+return 1;
+}
+i++;
+}
+return 0;
+}
+
+int checkreg(char tok[],int l_no)
+{
+int flag=0,i=0;
+char *exp = strtok(tok," ");
+if(exp!=NULL)
+{
+char *comreg[] = {"AREG,","BREG,","CREG,","DREG,"};
+while(comreg[i]!=NULL)
+{
+if(strcmp(comreg[i],exp)==0)
+{
+flag=1;
+break;
+}
+i++;
+}
+if(flag==1)
+{
+i=0;
+while(reg[i]!=NULL)
+{
+if(strcmp(reg[i],exp)==0)
+{
+printf("Error:Comma expected after register %d",l_no);
+break;
+}
+i++;
+}
+}
+}
+
+if(flag==0)
+{
+printf("Error:Expected register after mnemonic %d",l_no);
+return 0;
+}
+return 1;
+}
+
+int isany(char tok[])
+{
+int i=0;
+while(reg[i]!=NULL)
+{
+if(strcmp(reg[i],tok)==0)
+{
+return 1;
+}
+i++;
+}
+i=0;
+while(cc[i]!=NULL)
+{
+if(strcmp(cc[i],tok)==0)
+{
+return 1;
+}
+i++;
+}
+i=0;
+while(opcode[i]!=NULL)
+{
+if(strcmp(opcode[i],tok)==0)
+{
+return 1;
+}
+i++;
+}
+i=0;
+while(dir[i]!=NULL)
+{
+if(strcmp(dir[i],tok)==0)
+{
+return 1;
+}
+i++;
+}
+i=0;
+while(dl[i]!=NULL)
+{
+if(strcmp(dl[i],tok)==0)
+{
+return 1;
+}
+i++;
+}
+return 0;
+}
+
+int isnum(char tok[])
+{
+int i=0;
+while(tok[i])
+{
+if(isdigit(tok[i]))
+{
+i++;
+}
+else
+{
+return 0;
+}
+}
+return 1;
+}
+
+int ifupper(char tok[])
+{
+int i=0;
+while(tok[i]!= NULL  && !isdigit(tok[i]))
+{
+if(isupper(tok[i]))
+{
+i++;
+}
+else
+{
+return 0;
+}
+}
+return 1;
+}
+
+
+
+void one(char line[],int l_no)
+{
+char *tok = strtok(line,"\n");
+if(!((strcmp(tok,dir[0])==0)||(strcmp(tok,opcode[0])==0)))
+{
+printf("Error:Expected LTORG or STOP-> %d\n",l_no);
+}
+}
+
+void three(char line[],int l_no)
+{
+char token1[20],token2[20],token3[20];
+char *token = strtok(line," ");
+strcpy(token1,token);
+if(token!=NULL)
+{
+token = strtok(NULL," ");
+} 
+strcpy(token2,token);
+if(token!=NULL)
+{
+token = strtok(NULL,"\n");
+}
+strcpy(token3,token);
+if(isopcode(token1))
+{
+if(checkreg(token2,l_no))
+{
+if(isany(token3))
+{
+printf("Error:Invald symbolic name %d",l_no);
+}
+}
+}
+else
+{
+if(isany(token1))
+{
+printf("Error:Invalid Symbolic name %d",l_no);
+}
+else
+{
+char equ[3] = "EQU";
+if(isopcode(token2))
+{
+if(isany(token3))
+{
+printf("Error:Invalid Symbolic name %d",l_no);
+}
+}//check if second token is mnemonic
+else if(isdl(token2))
+{
+if(!isnum(token3))
+{
+printf("Error:Expected constant as third operand %d",l_no);
+}
+}//check if second token is DC/DS
+else if(strcmp(equ,token2)==0)
+{
+if(!isnum(token3))
+{
+printf("Error:Address sepcifier expected after EQU %d",l_no);
+}
+}//check if second token is EQU
+else
+{
+//printf("Error:Invalid Symbolic name! %d",l_no);
+}//do nothing  since it is neither
+}
+}
+}
+
+
+
+void two(char line[],int l_no)
+{
+char token[20];
+char *token1 = strtok(line," ");
+strcpy(token,token1);
+if(token!=NULL)
+{
+token1 = strtok(NULL,"\n");
+}
+if(isopcode(token))
+{
+if(!(isnum(token1)|| ifupper(token1)))//token1 is not a const or memmory op
+{
+printf("Error:Expected constant or memory operand after mnemonic ->%d",l_no);
+}
+}
+
+else if(strcmp(dir[1],token)==0)
+{
+if(!isnum(token1)|| !ifupper(token1))
+{
+printf("Error:address specifier expected after ORIGIN - >%d",l_no);
+}
+}
+else
+{
+if(isany(token))
+{
+printf("Error:Invalid Symbolic Name ->%d",l_no);
+}
+else
+{
+if(!isopcode(token1))
+{
+printf("Error:Invalid mnemonic instruction ->%d",l_no);
+}
+}
+}
+}
+
+void main(int argv,char *argc[])
+{
+if(argv!=2)
+{
+printf("Invalid number of arguments");
+exit(0);
+}
+else{
+FILE *fp =fopen(argc[1],"r");
+if(fp==NULL)
+{
+printf("Error");
+exit(0);
+}
+else{
+char line[79],line1[79];
+int l_no=1,toks;
+while(!feof(fp))
+{
+fgets(line,sizeof(line),fp);
+strcpy(line1,line);
+char *token = strtok(line," ");
+toks=0;
+while(token!=NULL)
+{
+token = strtok(NULL," ");
+toks++;
+}
+switch(toks)
+{
+case 0:
+      printf("Error:nothing on line %d",l_no);
+      break;			
+case 1:
+	//one(line,l_no);
+	break;
+case 2:
+	//two(line1,l_no);
+	break;
+case 3:
+	three(line1,l_no);
+	break;
+case 4:
+	//four(line,l_no);
+	break;
+default:
+	printf("Error on line %d",l_no);
+}
+l_no++;
+}
+
+
+
+}
+}
+}
+
